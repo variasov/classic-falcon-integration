@@ -5,7 +5,7 @@ from falcon import Request
 try:
     import jwt
 except ImportError:
-    pass
+    jwt = None
 
 
 from .base import Authenticator, AuthenticationFailed
@@ -28,10 +28,8 @@ class JWTAuthenticator(Authenticator):
         self.decoding_options = decoding_options
         self.field = field
 
-        try:
-            jwt
-        except NameError as error:
-            raise ImportError(f'Package {error.name} should be installed')
+        if jwt is None:
+            raise ImportError(f'Package jwt should be installed')
 
     def __call__(self, request: Request) -> None:
         token = self._extract_token(request)
@@ -39,7 +37,7 @@ class JWTAuthenticator(Authenticator):
         self._set_identity(request)
 
     def _set_identity(self, request: Request):
-        request.context.identity = self.factory(
+        request.context.identity = self.identity_factory(
             request.context.jwt[self.field]
         )
 

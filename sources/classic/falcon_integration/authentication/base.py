@@ -11,9 +11,10 @@ Factory = Callable[[Any], Any]
 
 
 class Authenticator:
+    identity_factory: Factory
 
-    def __init__(self, factory: Factory = None):
-        self.factory = factory
+    def __init__(self, identity_factory: Factory = None):
+        self.identity_factory = identity_factory
 
     def __call__(self, request: Request):
         raise NotImplementedError
