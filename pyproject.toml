@@ -4,3 +4,35 @@ requires = [
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "classic-falcon-integration"
+version = "1.0.1"
+authors = [
+    {name = "Sergey Variasov", email = "variasov@gmail.com"},
+]
+description = "Provides integrations of classic libs with Falcon web framework"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "falcon~=3.1",
+    "orjson~=3.10",
+    "classic-error-handling~=0.2",
+    "pydantic~=2.11",
+    "spectree~=1.5",
+]
+
+[project.urls]
+Homepage = "https://github.com/variasov/classic-falcon-integration"
+
+[project.optional-dependencies]
+dev = [
+    "build~=1.2.2.post1",
+    "pytest==8.3.4",
+    "pytest-cov==6.0.0",
+    "twine~=4.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["sources"]
+namespaces = true

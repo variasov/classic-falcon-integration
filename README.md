@@ -1,67 +1,99 @@
-# Classic HTTP Api
+# Classic Falcon Integration
 
-Этот пакет содержит вариант HTTP API, совместимый с принципами Ioc и DI.
-Является оберткой над фреймворком
-[Falcon](https://falcon.readthedocs.io/en/stable/index.html), 
-позволяющей описывать входные и выходные параметр входных точек с помощью
-[msgspec][https://jcristharif.com/msgspec/index.html], и предстоявлящей 
-интеграцию с OpenAPI и Swagger.
+Предоставляет простую интеграцию веб-фреймворка 
+[Falcon](https://falcon.readthedocs.io/en/stable/),
+[SpecTree](https://spectree.readthedocs.io/en/latest/index.html),
+[orjson](https://github.com/ijl/orjson)
+и [classic-error-handling](https://github.com/variasov/classic-error-handling).
 
-Пример:
+## Установка
 
+```bash
+pip install classic-falcon-integration
+```
+
+## Quickstart
 ```python
-from falcon import Request, Response
+from falcon import App, Request, Response
+from spectree import Response as Responses
+from pydantic import BaseModel
+import waitress
+
 from classic.components import component
-from classic.http_api import App, specification
-import msgspec
+from classic.falcon_integration import specification, register_all
+from classic import db_tools
 
 
-# Описывает параметры запроса для GET /api/some_obj
-class SomeObjFilter(msgspec.Struct):
-    number: int
+class Pet(BaseModel):
+    id: int
+    name: str
+    age: int
 
 
-# Описывает структуру ответа
-class SomeObj(msgspec.Struct):
-    some_attr: int
+class FilterPets(BaseModel):
+    name__contains: list[str] | None = None
+    age__le: int | None = None
+    age__gt: int | None = None
+    id: int | None = None
 
 
-# Описывает структуру запроса для POST /api/some_obj
-class CreateSomeObjRequest(msgspec.Struct):
-    some_attr: int
+class NewPet(BaseModel):
+    name: str
+    age: int
 
 
 @component
-class SomeObjResource:
+class PetsResource:
+    db: db_tools.Engine
 
-    @specification(query=SomeObjFilter, response=SomeObj)
+    @specification(
+        query=FilterPets,
+        resp=Responses(
+            HTTP_200=list[Pet],
+        ),
+        operation_id='find_pets',
+        tags=['pets'],
+    )
     def on_get(self, request: Request, response: Response):
-        # Представим себе, что объекты берутся из БД
-        response.media = [
-            SomeObj(number)
-            for number in range(
-                # Объект запроса содержится в контексте под именем media.
-                request.context.media.number,
-            )
-        ]
+        # Валидация по спецификации отключена по умолчанию,
+        # потому вызов валидации обязательно добавлять вручную.
+        # Валидацию лучше сего проводить через model_validate,
+        # так как далее данные все равно будут переданы в виде dict
+        FilterPets.model_validate(request.params)
+        
+        # Здесь приведен пример работы с БД с classic-db-tools,
+        # но здесь может быть что угодно
+        with self.db:
+            response.media = self.db.queries.filter_pets(
+                **request.params
+            ).returning(
+                db_tools.ToCls(Pet, id='id'),
+                returns=Pet,
+            ).many()
 
-    @specification(media=CreateSomeObjRequest, response=SomeObj)
+    @specification(
+        json=NewPet,
+        resp=Responses(
+            HTTP_200=Pet,
+        ),
+        tags=['pets'],
+    )
     def on_post(self, request: Request, response: Response):
-        # Представим себе, что объект был сохранен в БД;)
-        response.media = SomeObj(
-            **msgspec.structs.asdict(request.context.media)
-        )
+        NewPet.model_validate(request.media)
+        with self.db:
+            response.media = self.db.queries.save_pet(
+                **request.media,
+            )
 
 
-# Композит
 if __name__ == '__main__':
-    from wsgiref.simple_server import make_server
-
-    app = App(openapi=True)
-    app.add_route('/api/some_obj', SomeObjResource())
-
-    # 
-    with make_server('', 8000, app) as httpd:
-        httpd.serve_forever()
-
+    app = App()
+    app.add_route('/api/pets', PetsResource())
+    register_all(app)
+    
+    waitress.serve(
+        app,
+        host='127.0.0.1',
+        port='8000',
+    )
 ```
