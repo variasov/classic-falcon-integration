@@ -13,6 +13,7 @@ pip install classic-falcon-integration
 ```
 
 ## Quickstart
+
 ```python
 from falcon import App, Request, Response
 from spectree import Response as Responses
@@ -60,13 +61,13 @@ class PetsResource:
         # Валидацию лучше сего проводить через model_validate,
         # так как далее данные все равно будут переданы в виде dict
         FilterPets.model_validate(request.params)
-        
+
         # Здесь приведен пример работы с БД с classic-db-tools,
         # но здесь может быть что угодно
         with self.db:
             response.media = self.db.queries.filter_pets(
                 **request.params
-            ).returning(
+            ).return_as(
                 db_tools.ToCls(Pet, id='id'),
                 returns=Pet,
             ).many()
@@ -90,7 +91,7 @@ if __name__ == '__main__':
     app = App()
     app.add_route('/api/pets', PetsResource())
     register_all(app)
-    
+
     waitress.serve(
         app,
         host='127.0.0.1',

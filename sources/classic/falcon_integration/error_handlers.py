@@ -11,7 +11,11 @@ def serialize_pydantic_error(
     error: pydantic.ValidationError, params: dict[str, Any],
 ):
     response.status = status_codes.HTTP_400
-    response.media = str(error)
+    response.media = error.errors(
+        include_url=False,
+        include_context=False,
+        include_input=False,
+    )
 
 
 def serialize_app_error(
