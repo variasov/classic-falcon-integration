@@ -1,7 +1,6 @@
 import falcon
 
 from .error_handlers import register_error_handlers
-from .specification import register_specifications
 from .serialization import register_serializer
 
 
@@ -16,6 +15,5 @@ def register_all(app: falcon.App):
     иначе SpecTree не увидит URL-ы ресурсов.
     """
     register_error_handlers(app)
-    register_specifications(app)
     register_serializer(app)
     return app

@@ -2,7 +2,6 @@
 
 Предоставляет простую интеграцию веб-фреймворка 
 [Falcon](https://falcon.readthedocs.io/en/stable/),
-[SpecTree](https://spectree.readthedocs.io/en/latest/index.html),
 [orjson](https://github.com/ijl/orjson)
 и [classic-error-handling](https://github.com/variasov/classic-error-handling).
 
@@ -16,12 +15,11 @@ pip install classic-falcon-integration
 
 ```python
 from falcon import App, Request, Response
-from spectree import Response as Responses
 from pydantic import BaseModel
 import waitress
 
 from classic.components import component
-from classic.falcon_integration import specification, register_all
+from classic.falcon_integration import register_all
 from classic import db_tools
 
 
@@ -47,14 +45,6 @@ class NewPet(BaseModel):
 class PetsResource:
     db: db_tools.Engine
 
-    @specification(
-        query=FilterPets,
-        resp=Responses(
-            HTTP_200=list[Pet],
-        ),
-        operation_id='find_pets',
-        tags=['pets'],
-    )
     def on_get(self, request: Request, response: Response):
         # Валидация по спецификации отключена по умолчанию,
         # потому вызов валидации обязательно добавлять вручную.
@@ -72,13 +62,6 @@ class PetsResource:
                 returns=Pet,
             ).many()
 
-    @specification(
-        json=NewPet,
-        resp=Responses(
-            HTTP_200=Pet,
-        ),
-        tags=['pets'],
-    )
     def on_post(self, request: Request, response: Response):
         NewPet.model_validate(request.media)
         with self.db:
