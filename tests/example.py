@@ -1,52 +1,52 @@
-from falcon import Request, Response
-from classic.components import component
-from classic.http_api import App, specification
-import msgspec
+from dataclasses import dataclass
+
+import pydantic
+from falcon import App, Request, Response
+
+from classic.falcon_integration import register_all
 
 
 # Описывает параметры запроса для GET /api/some_obj
-class SomeObjFilter(msgspec.Struct):
+class SomeObjFilter(pydantic.BaseModel):
     number: int
 
 
 # Описывает структуру ответа
-class SomeObj(msgspec.Struct):
+@dataclass
+class SomeObj:
     some_attr: int
 
 
 # Описывает структуру запроса для POST /api/some_obj
-class CreateSomeObjRequest(msgspec.Struct):
+class CreateSomeObjRequest(pydantic.BaseModel):
     some_attr: int
 
 
-@component
 class SomeObjResource:
 
-    @specification(query=SomeObjFilter, response=SomeObj)
     def on_get(self, request: Request, response: Response):
         # Представим себе, что объекты берутся из БД
         response.media = [
             SomeObj(number)
             for number in range(
                 # Объект запроса содержится в контексте под именем query.
-                request.context.query.number,
+                int(request.params['number']),
             )
         ]
 
-    @specification(media=CreateSomeObjRequest, response=SomeObj)
     def on_post(self, request: Request, response: Response):
         # Представим себе, что объект был сохранен в БД;)
-        response.media = SomeObj(
-            **msgspec.structs.asdict(request.context.media)
-        )
+        response.media = SomeObj(**request.media)
 
 
 # Композит
 if __name__ == '__main__':
     from wsgiref.simple_server import make_server
 
-    app = App(openapi=True)
+    app = App()
     app.add_route('/api/some_obj', SomeObjResource())
+
+    app = register_all(app)
 
     # 
     with make_server('', 8000, app) as httpd:
