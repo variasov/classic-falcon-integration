@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from functools import partial
 
 import orjson
@@ -10,6 +11,8 @@ import pydantic
 def default(self, obj: Any):
     if isinstance(obj, pydantic.BaseModel):
         return obj.model_dump_json()
+    if isinstance(obj, (set, frozenset, Iterator)):
+        return list(obj)
     raise TypeError
 
 
